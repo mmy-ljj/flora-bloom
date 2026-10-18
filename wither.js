@@ -28,7 +28,7 @@ const A_END = 0.66; // 合拢段占整段凋零的比例
 
 export const WITHER_PROFILES = {
   /* 孤挺花：花被片宽厚，先一层层合拢、花喉发黄，最后整朵往下沉 */
-  original: { duration: 7200, closeTo: 19, sag: 0.055, grade: { sat: 0.62, bri: 0.965, sepia: 0.20, hue: -5 }, finale: "settle" },
+  original: { duration: 7200, closeTo: 22, sag: 0.055, grade: { sat: 0.62, bri: 0.965, sepia: 0.20, hue: -5 }, finale: "settle" },
   /* 白山茶：花冠厚实，合拢后整朵脱落（不散瓣），所以是 fall */
   white: { duration: 6600, closeTo: 21, sag: 0.035, grade: { sat: 0.66, bri: 0.975, sepia: 0.22, hue: -4 }, finale: "settle" },
   /* 香雪兰：花朵小、失水快，先垂头再收成细长的枯花，黄得最明显 */
