@@ -49,7 +49,7 @@ const mainGesture = new HandOpenness(), secondGesture = new HandOpenness({ smoot
 if (debug && new URLSearchParams(location.search).has("debug")) debug.hidden = false;
 const dialog = $("#flower-dialog");
 const state = { mode: "idle", stream: null, tracker: null, lastFrameTime: -1,
-  transitionTimer: null, customUrl: null, frames: {}, currentFrame: null, openness: 1, demoStartedAt: null, species: 0, primaryPalm: null,
+  transitionTimer: null, customUrl: null, frames: {}, currentFrame: null, openness: 1, demoStartedAt: null, holdUntil: 0, species: 0, primaryPalm: null,
   cycles: 0, peaked: false, roll: null, withering: false };
 state.wither = createWither(stage);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -132,7 +132,11 @@ async function startWither() {
   page.classList.remove("is-withering");
   state.cycles = 0; state.peaked = false; state.roll = null;
   /* 停在凋零结束的那一帧上，不硬切回花苞：下一次手掌张开时帧序自然继续往前，没有跳变 */
-  if (state.mode === "demo") state.demoStartedAt = performance.now();
+  if (state.mode === "demo" && finished) {
+    /* 让枯掉的花在原地停一会儿，别刚凋零就立刻又开满 */
+    state.holdUntil = performance.now() + 2400;
+    state.demoStartedAt = state.holdUntil;
+  }
   if (finished) note.textContent = "花已凋零 · 重新张开手掌，再养一朵";
   setLabel(state.mode === "camera" ? "请把手放入画面" : "等待开始", state.mode === "camera");
 }
@@ -221,7 +225,7 @@ if (debug && !debug.hidden) window.__floraDebug = {
   get bloomState() { return { mode: state.mode, cycles: state.cycles, withering: state.withering, frame: state.currentFrame }; },
 };
 function track(now) {
-  if (state.mode === "demo" && FLOWERS[state.species].kind === "frames" && !state.withering) {
+  if (state.mode === "demo" && FLOWERS[state.species].kind === "frames" && !state.withering && now >= state.holdUntil) {
     const phase = ((now - state.demoStartedAt) % 7000) / 7000;
     const openness = (1 - Math.cos(phase * Math.PI * 2)) / 2;
     showFrame(Math.round((1 - openness) * 28));
