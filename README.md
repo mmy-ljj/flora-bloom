@@ -114,3 +114,7 @@ Then open http://localhost:8080/ (the camera/microphone features need https or l
 
 Any static host works. With GitHub Pages: Settings → Pages → Deploy from a branch →
 `main` / root.
+# 粉色百合凋零视频
+
+粉色百合的凋零动画使用用户提供的视频提取的 81 张透明 WebP 帧，约 10 秒，先与盛开帧渐变衔接，再播放花瓣收拢、下垂和消失的完整过程。素材位于 `assets/wither/lily/`，提取脚本位于 `tools/extract_lily_wilt.py`。若素材加载失败，会自动回退到原有程序化凋零动画；其余花仍保持原有动画。
+

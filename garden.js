@@ -56,6 +56,19 @@ const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const frameUrl = (species, index) => FLOWERS[species].folder === "original"
   ? `./assets/frames/flower_${String(index).padStart(2, "0")}.webp`
   : `./assets/seedance/${FLOWERS[species].folder}/flower_${String(index).padStart(2, "0")}.webp`;
+let lilyWiltFrames = null;
+async function preloadLilyWilt() {
+  if (lilyWiltFrames) return lilyWiltFrames;
+  const frames = await Promise.all(Array.from({ length: 81 }, (_, index) => new Promise((resolve) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => resolve(null);
+    image.src = `./assets/wither/lily/wilt_${String(index).padStart(3, "0")}.webp`;
+  })));
+  if (frames.some((frame) => !frame)) throw new Error("Lily wilt frame download failed");
+  lilyWiltFrames = frames;
+  return frames;
+}
 
 async function preloadSpeciesFrames(species) {
   if (state.frames[species]) return state.frames[species];
@@ -134,12 +147,18 @@ async function startWither() {
   let frames = null;
   try { if (!customFlower) frames = await preloadSpeciesFrames(state.species); }
   catch (error) { console.error("Wither frames unavailable", error); }
+  let wiltFrames = null;
+  if (!customFlower && witherProfileKey() === "lily") {
+    try { wiltFrames = await preloadLilyWilt(); }
+    catch (error) { console.error("Lily wilt video frames unavailable", error); }
+  }
   if (run !== state.witherRun || !state.withering) return;
   const finished = await state.wither.play({
     img: customFlower ? custom : animation,
     from: fromIndex,
     profileKey: witherProfileKey(),
     frames,
+    wiltFrames,
     setFrame: customFlower ? null : (index) => showFrame(index),
   });
   if (run !== state.witherRun) return;

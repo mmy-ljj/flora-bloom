@@ -12,8 +12,7 @@
  *   fall    —— 合拢后整朵垂落淡出（山茶：花谢整朵脱落、不散瓣）
  *   shatter —— 合拢后花瓣成片散落（芍药：一开即散）
  *
- * 之后若拿到真实的凋零视频帧，给对应花种加上 witherFrames，用帧序列替换 A 段即可，
- * B 段的收尾与衔接逻辑不用改。
+ * 百合使用实际凋零视频的逐帧画面，其他花仍使用程序化动画。
  */
 
 const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
@@ -159,7 +158,8 @@ export function createWither(stage) {
     const closeTo = Math.max(0, Math.min(28, profile.closeTo));
     const setFrame = typeof opts.setFrame === "function" ? opts.setFrame : () => {};
     const frames = Array.isArray(opts.frames) ? opts.frames : null;
-    const duration = reduced ? Math.min(2400, profile.duration) : profile.duration;
+    const wiltFrames = Array.isArray(opts.wiltFrames) && opts.wiltFrames.length > 1 ? opts.wiltFrames : null;
+    const duration = reduced ? Math.min(2400, profile.duration) : wiltFrames ? 10000 : profile.duration;
 
     const nw = img.naturalWidth;
     const nh = img.naturalHeight;
@@ -225,6 +225,31 @@ export function createWither(stage) {
       const step = (now) => {
         if (!running) return;
         const t = clamp01((now - started) / duration);
+        if (wiltFrames) {
+          const first = wiltFrames[0];
+          const index = Math.min(wiltFrames.length - 1, Math.floor(t * (wiltFrames.length - 1)));
+          const blend = smoothstep(0, 0.085, t);
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+          ctx.clearRect(0, 0, DW, DH);
+          ctx.globalAlpha = 1 - blend;
+          if (blend < 1) ctx.drawImage(img, 0, 0, DW, DH);
+          ctx.globalAlpha = blend;
+          ctx.drawImage(wiltFrames[index] || first, 0, 0, DW, DH);
+          ctx.globalAlpha = 1;
+          if (!handedOff) {
+            handedOff = true;
+            img.style.opacity = "0";
+            layer.style.opacity = "1";
+          }
+          if (t < 1) { raf = requestAnimationFrame(step); return; }
+          raf = 0;
+          stage.classList.remove("is-withering");
+          stage.classList.add("is-withered");
+          held = true;
+          settleResolve = null;
+          resolve(true);
+          return;
+        }
         const tint = smoothstep(0.02, 0.92, t);
         if (t < A_END || profile.finale === "settle") {
           const closing = t < A_END;
