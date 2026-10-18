@@ -110,9 +110,30 @@ export function createWither(stage) {
     ctx.restore();
   }
 
-  function play(opts) {
+  async function play(opts) {
     const img = opts?.img;
-    if (!img || !img.complete || !img.naturalWidth) return Promise.resolve(false);
+    if (!img) return false;
+    /* demo 模式下帧的 src 刚被换过，img 常常还没 complete；
+     * 这里等它一小会儿（最多 1.5s），别让凋零还没开始就被判为失败。 */
+    if (!img.complete || !img.naturalWidth) {
+      const ready = await new Promise((res) => {
+        let done = false;
+        const finish = (v) => {
+          if (done) return;
+          done = true;
+          img.removeEventListener("load", onLoad);
+          img.removeEventListener("error", onError);
+          clearTimeout(tm);
+          res(v);
+        };
+        const onLoad = () => finish(true);
+        const onError = () => finish(false);
+        const tm = setTimeout(() => finish(img.complete && img.naturalWidth > 0), 1500);
+        img.addEventListener("load", onLoad);
+        img.addEventListener("error", onError);
+      });
+      if (!ready) return false;
+    }
     resetLayer();
     const profile = WITHER_PROFILES[opts.profileKey] || WITHER_PROFILES.custom;
     const from = Math.max(0, Math.min(28, opts.from ?? 0));

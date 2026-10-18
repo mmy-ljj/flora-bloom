@@ -106,22 +106,34 @@ async function startWither() {
   const customFlower = stage.classList.contains("has-image");
   state.withering = true; state.peaked = false; state.roll = null;
   page.classList.add("is-withering");
-  setLabel("花在凋零", false);
+  setLabel("正在凋零", false);
   note.textContent = `${customFlower ? "这朵花" : currentFlower().short}正在凋零…`;
+  /* 兜底：网络慢、帧没加载完、标签页被切走都可能让引擎卡住，
+   * 任何情况下都不让这朵花永远停在「凋零中」。 */
+  clearTimeout(state.witherGuard);
+  state.witherGuard = setTimeout(() => {
+    if (!state.withering) return;
+    state.wither.stop();
+    state.withering = false;
+    page.classList.remove("is-withering");
+    state.cycles = 0; state.peaked = false; state.roll = null;
+    note.textContent = "花已凋零 · 重新张开手掌，再养一朵";
+    setLabel(state.mode === "camera" ? "请把手放入画面" : "等待开始", state.mode === "camera");
+  }, 16000);
   const finished = await state.wither.play({
     img: customFlower ? custom : animation,
     from: state.currentFrame ?? 0,
     profileKey: witherProfileKey(),
     setFrame: customFlower ? null : (index) => showFrame(index),
   });
+  clearTimeout(state.witherGuard);
   state.wither.stop();
-  if (!finished) return;
-  state.withering = false; state.cycles = 0; state.peaked = false; state.roll = null;
+  state.withering = false;
   page.classList.remove("is-withering");
-  /* 停在凋零后的那一帧上，不硬切回花苞：下一次张开手掌时帧序列会从这里继续往前走，
-   * 画面因此没有跳变。 */
+  state.cycles = 0; state.peaked = false; state.roll = null;
+  /* 停在凋零结束的那一帧上，不硬切回花苞：下一次手掌张开时帧序自然继续往前，没有跳变 */
   if (state.mode === "demo") state.demoStartedAt = performance.now();
-  note.textContent = "花已凋零 · 重新张开手掌，再养一朵";
+  if (finished) note.textContent = "花已凋零 · 重新张开手掌，再养一朵";
   setLabel(state.mode === "camera" ? "请把手放入画面" : "等待开始", state.mode === "camera");
 }
 function abortWither() {
