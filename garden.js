@@ -4,7 +4,7 @@ const MODEL_URL = new URL("./assets/mediapipe/hand_landmarker.task", import.meta
 const WASM_URL = new URL("./assets/mediapipe/wasm", import.meta.url).href;
 const LIBRARY_URL = new URL("./assets/mediapipe/tasks-vision.mjs", import.meta.url).href;
 const FLOWERS = [
-  { name: "重瓣孤挺花<br /><i>Amaryllis · In Motion</i>", label: "石蒜科孤挺花属 · Hippeastrum hybridum", short: "重瓣孤挺花", meaning: "骄傲 · 渴望被爱 · 华丽", kind: "frames", folder: "original", image: "./assets/pink-bloom-open.png",
+  { name: "重瓣孤挺花<br /><i>Amaryllis · In Motion</i>", label: "石蒜科孤挺花属 · Hippeastrum hybridum", short: "重瓣孤挺花", meaning: "骄傲 · 渴望被爱 · 华丽", kind: "frames", folder: "original", image: "./assets/pink-bloom-open.webp",
     intro: "六枚宽卵形的花被片分两轮交错展开，瓣身玫瑰粉、正中一条白色中脉，花喉收成黄绿色；最中心的重瓣化小瓣簇层层卷叠，把花蕊收在瓣间。花蕾是长梭形，被两枚绿色膜质苞片托住，从粗壮中空的花葶顶端抽出。",
     facts: [["学名", "Hippeastrum hybridum"], ["科属", "石蒜科 Amaryllidaceae · 孤挺花属"], ["花期", "1—4 月，单葶着花 2—4 朵，每朵开 5—7 天"], ["原产", "南美巴西、秘鲁的林缘与灌丛"], ["花语", "骄傲 · 渴望被爱 · 华丽"]],
     detail: "识别依据：把这朵数字花提取的 29 帧逐张比对，花被片两轮各 3 枚、瓣基黄绿色花喉、每枚瓣面一条白色中脉、花葶顶端两枚佛焰苞状苞片、花葶中空，这五项特征同时落在重瓣孤挺花上；中心那簇卷叠的小瓣由雄蕊瓣化而来，所以看不到外伸的花药。习性：球根植物，鳞茎直径 6—8 厘米，喜排水良好的介质与明亮散射光，花后进入生长期。页面按 29 帧推进：张开手掌看它层层盛开，握拳回到花苞。",
