@@ -26,7 +26,7 @@
       <div class="flower-field" id="flower-field" aria-label="动态花朵交互区域">
         <img class="hero-flower" src="./assets/white-camellias.png" alt="背景中的两朵白色山茶花" />
         <div class="bloom-position" id="bloom-position" aria-hidden="true"><div class="bloom-stage" id="bloom-stage">
-          <img class="bloom-animation" id="bloom-animation" src="./assets/pink-bloom-open.png" alt="即梦视频中的粉色数字花" />
+          <img class="bloom-animation" id="bloom-animation" src="./assets/pink-bloom-open.png" alt="重瓣孤挺花的逐帧数字花" />
           <img class="species-bud" id="species-bud" alt="合拢的花朵" />
           <img class="species-open" id="species-open" alt="盛开的花朵" />
           <img class="custom-flower" id="custom-flower" alt="" />
@@ -35,9 +35,9 @@
       </div>
       <aside class="flower-note" aria-label="花朵资料">
         <span class="flower-no" id="flower-no">01</span>
-        <h2 id="flower-title">花开<span>·</span>花合<br /><i>Bloom · In Motion</i></h2>
-        <p class="note-label">FLOWER LANGUAGE</p><p class="flower-meaning" id="flower-meaning">指尖呼吸 · 自由开合</p>
-        <button class="flower-info-button" id="flower-info-button" type="button" aria-label="了解粉色数字花" aria-haspopup="dialog">了解这朵花 <span aria-hidden="true">↗</span></button>
+        <h2 id="flower-title">重瓣孤挺花<br /><i>Hippeastrum · In Motion</i></h2>
+        <p class="note-label">FLOWER LANGUAGE</p><p class="flower-meaning" id="flower-meaning">骄傲 · 渴望被爱 · 华丽</p>
+        <button class="flower-info-button" id="flower-info-button" type="button" aria-label="了解重瓣孤挺花" aria-haspopup="dialog">了解这朵花 <span aria-hidden="true">↗</span></button>
       </aside>
       <div class="gesture-hud" id="gesture-hud" aria-live="off"><div class="hud-row"><span>01 主手开合</span><strong id="palm-value">等待识别</strong></div><div class="hud-track"><i id="palm-progress"></i></div><div class="hud-row"><span>02 第二只手向左滑</span><strong id="switch-value">等待识别</strong></div><div class="hud-track"><i id="switch-progress"></i></div></div>
       <div class="interaction-note" id="interaction-note" aria-live="polite">轻触开始，花随你而动</div>
@@ -56,7 +56,7 @@
   </div>
   <dialog class="flower-dialog" id="flower-dialog" aria-labelledby="dialog-flower-name">
     <div class="dialog-top"><span class="dialog-kicker" id="dialog-flower-number">FLORA / 01</span><button class="dialog-close" id="dialog-close" type="button" aria-label="关闭花朵介绍">×</button></div>
-    <div class="dialog-body"><img id="dialog-flower-image" alt="" /><div class="dialog-copy"><p class="dialog-label" id="dialog-flower-label">FLOWER STUDY</p><h2 id="dialog-flower-name"></h2><p class="dialog-intro" id="dialog-flower-intro"></p><p class="dialog-detail" id="dialog-flower-detail"></p><a class="dialog-source" id="dialog-flower-source" href="https://www.rhs.org.uk/" target="_blank" rel="noopener noreferrer" hidden>植物形态参考 · RHS ↗</a><p class="dialog-interaction">主手张合控制花开；第二只手向左滑，切换下一朵。</p></div></div>
+    <div class="dialog-body"><img id="dialog-flower-image" alt="" /><div class="dialog-copy"><p class="dialog-label" id="dialog-flower-label">FLOWER STUDY</p><h2 id="dialog-flower-name"></h2><p class="dialog-intro" id="dialog-flower-intro"></p><dl class="dialog-facts" id="dialog-flower-facts"></dl><p class="dialog-detail" id="dialog-flower-detail"></p><a class="dialog-source" id="dialog-flower-source" href="https://www.rhs.org.uk/" target="_blank" rel="noopener noreferrer" hidden>植物形态参考 · RHS ↗</a><p class="dialog-interaction">主手张合控制花开；第二只手向左滑，切换下一朵。</p></div></div>
   </dialog>
   <script type="module" src="./garden.js"></script>
 </body>

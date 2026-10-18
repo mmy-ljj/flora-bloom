@@ -69,3 +69,9 @@
 @media(max-width:650px){.bloom-position,.experience.is-camera .bloom-position{top:54%;transform:translate(-50%,-50%)}.flower-info-button{margin-top:11px;font-size:9px}.flower-dialog{padding:18px 20px 25px}.dialog-body{display:block;margin-top:14px}.dialog-body img{display:block;width:min(67vw,270px);height:200px;margin:0 auto;object-fit:contain}.dialog-copy h2{margin:8px 0 13px;font-size:35px}.dialog-intro{font-size:13px;margin-bottom:12px}.dialog-detail{font-size:11px}.dialog-interaction{margin-top:17px}}
 .bloom-stage .bloom-animation{-webkit-mask-image:none;mask-image:none}
 .dialog-source{display:inline-block;margin-top:14px;color:#8b6168;font:10px var(--han);text-underline-offset:4px}.dialog-source[hidden]{display:none}
+
+.dialog-facts{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 16px;margin:0 0 20px;padding:15px 0 16px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.dialog-facts dt{margin:0;font:500 8px var(--sans);letter-spacing:.16em;color:#a6a89d;text-transform:uppercase;padding-top:3px;white-space:nowrap}
+.dialog-facts dd{margin:0;font:12px/1.8 var(--han);color:#4b5046}
+.dialog-detail{font-size:12.5px;line-height:2.05}
+@media(max-width:650px){.dialog-facts{grid-template-columns:1fr;gap:1px;margin-bottom:16px}.dialog-facts dd{margin:0 0 9px}.dialog-detail{line-height:1.95}}

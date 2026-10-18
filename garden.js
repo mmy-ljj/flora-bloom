@@ -4,11 +4,31 @@ const MODEL_URL = new URL("./assets/mediapipe/hand_landmarker.task", import.meta
 const WASM_URL = new URL("./assets/mediapipe/wasm", import.meta.url).href;
 const LIBRARY_URL = new URL("./assets/mediapipe/tasks-vision.mjs", import.meta.url).href;
 const FLOWERS = [
-  { name: "花开<span>·</span>花合<br /><i>Bloom · In Motion</i>", label: "粉色数字花", meaning: "指尖呼吸 · 自由开合", kind: "frames", folder: "original", image: "./assets/pink-bloom-open.png", intro: "一朵从你最初提供的即梦视频中走出的粉色数字花。", detail: "原视频未标注真实植物种类，且花形经过生成与设计，因此不把它误认成某个确定的物种。手掌张合会直接选取它盛开到合拢的逐帧花态。" },
-  { name: "白色山茶<br /><i>Camellia · In Motion</i>", label: "白色山茶（推测）", meaning: "层叠白瓣 · 缓缓舒展", kind: "frames", folder: "white", image: "./assets/seedance/white/flower_00.webp", intro: "层叠的白色花瓣围住金黄色花心，外形接近重瓣山茶。", detail: "这段新视频呈现单朵白花由盛开合成花苞。山茶有单瓣到重瓣等多种花形；这里仅按生成画面的外观推测为山茶意象，不能据此鉴定具体物种或品种。", source: "https://www.rhs.org.uk/plants/camellia/growing-guide" },
-  { name: "香雪兰<br /><i>Freesia · In Motion</i>", label: "香雪兰（推测）", meaning: "紫色花序 · 轻盈舒展", kind: "frames", folder: "purple", image: "./assets/seedance/purple/flower_00.webp", intro: "紫色漏斗状小花沿一侧花枝排列，外形接近香雪兰。", detail: "香雪兰常形成单侧花序，花色可呈紫色或淡紫色。这段生成视频只提供外观，因此名称是形态推测，不能确认品种，也无法从画面判断香气。手掌开合可让两朵花同步变化。", source: "https://www.rhs.org.uk/plants/freesia" },
-  { name: "重瓣百合<br /><i>Lily · In Motion</i>", label: "粉色重瓣百合（推测）", meaning: "柔粉花瓣 · 舒展如星", kind: "frames", folder: "lily", image: "./assets/seedance/lily/flower_00.webp", intro: "修长而外展的粉色花瓣，形态接近重瓣百合。", detail: "画面取自你新提供的视频。百合的重瓣花形可出现额外花瓣；这里只能依据数字影像推测外观，不能确认真实品种或香味。主手张合可让花在盛开与花苞间停留。", source: "https://www.rhs.org.uk/plants/lilies/how-to-grow-lilies" },
-  { name: "粉色芍药<br /><i>Peony · In Motion</i>", label: "粉色芍药（推测）", meaning: "柔软花瓣 · 层层拥抱", kind: "frames", folder: "peony", image: "./assets/seedance/peony/flower_00.webp", intro: "宽大的粉色外瓣围住浅色花心，外形接近芍药的花型。", detail: "画面取自你新提供的另一段视频。芍药有单瓣、重瓣与中央花瓣化等多种形态；数字影像不足以确认物种或品种，因此这里保留“推测”标注。", source: "https://www.rhs.org.uk/plants/peony/herbaceous/growing-guide" },
+  { name: "重瓣孤挺花<br /><i>Hippeastrum · In Motion</i>", label: "石蒜科孤挺花属 · Hippeastrum hybridum", short: "重瓣孤挺花", meaning: "骄傲 · 渴望被爱 · 华丽", kind: "frames", folder: "original", image: "./assets/pink-bloom-open.png",
+    intro: "六枚宽卵形的花被片分两轮交错展开，瓣身玫瑰粉、正中一条白色中脉，花喉收成黄绿色；最中心的重瓣化小瓣簇层层卷叠，把花蕊收在瓣间。花蕾是长梭形，被两枚绿色膜质苞片托住，从粗壮中空的花葶顶端抽出。",
+    facts: [["学名", "Hippeastrum hybridum"], ["科属", "石蒜科 Amaryllidaceae · 孤挺花属"], ["花期", "1—4 月，单葶着花 2—4 朵，每朵开 5—7 天"], ["原产", "南美巴西、秘鲁的林缘与灌丛"], ["花语", "骄傲 · 渴望被爱 · 华丽"]],
+    detail: "识别依据：把这朵数字花提取的 29 帧逐张比对，花被片两轮各 3 枚、瓣基黄绿色花喉、每枚瓣面一条白色中脉、花葶顶端两枚佛焰苞状苞片、花葶中空，这五项特征同时落在重瓣孤挺花上；中心那簇卷叠的小瓣由雄蕊瓣化而来，所以看不到外伸的花药。习性：球根植物，鳞茎直径 6—8 厘米，喜排水良好的介质与明亮散射光，花后进入生长期。页面按 29 帧推进：张开手掌看它层层盛开，握拳回到花苞。",
+    source: "https://www.rhs.org.uk/plants/hippeastrum/growing-guide" },
+  { name: "白山茶<br /><i>Camellia · In Motion</i>", label: "山茶科山茶属 · Camellia japonica", short: "白山茶", meaning: "理想的爱 · 谦逊 · 可爱", kind: "frames", folder: "white", image: "./assets/seedance/white/flower_00.webp",
+    intro: "花瓣自外向内排成六层以上的重瓣型，倒卵形、瓣缘微微起皱，白色调里透一点奶油光；花心收着一簇金黄色雄蕊，花丝与花药团成一个小绒球。花蕾圆球带尖，外面裹着青绿色萼片，开放时从顶端一圈圈翻卷出来。",
+    facts: [["学名", "Camellia japonica"], ["科属", "山茶科 Theaceae · 山茶属"], ["花期", "11—5 月，盛期 1—3 月，单朵开 7—10 天"], ["原产", "中国东部、日本、朝鲜半岛"], ["花语", "理想的爱 · 谦逊 · 可爱"]],
+    detail: "识别依据：分层重瓣、花心一束金黄雄蕊、圆尖花蕾、厚革质深绿叶，这一组结构是山茶属重瓣型的稳定特征；白色品种的瓣心带一点暖黄，与白色月季的蕊心排布不同。习性：常绿灌木，耐半阴，冬春开花，花谢整朵脱落而不散瓣。这组帧从盛开推向花苞，手掌开合可在两者之间来回。",
+    source: "https://www.rhs.org.uk/plants/camellia/growing-guide" },
+  { name: "香雪兰<br /><i>Freesia · In Motion</i>", label: "鸢尾科香雪兰属 · Freesia × hybrida", short: "香雪兰", meaning: "清香 · 纯洁 · 敏感的心", kind: "frames", folder: "purple", image: "./assets/seedance/purple/flower_00.webp",
+    intro: "花朵在花枝一侧依次排成单侧总状花序，每一朵都是漏斗形：细长花被筒从苞片里伸出，末端 6 枚近圆形花被片向外铺开，喉部转成乳白与浅黄；下方还挂着几枚青绿色花苞，按自下而上的顺序陆续开放。",
+    facts: [["学名", "Freesia × hybrida"], ["科属", "鸢尾科 Iridaceae · 香雪兰属"], ["花期", "3—5 月，单枝着花 2—4 朵"], ["原产", "南非开普敦一带的冬季降雨区"], ["花语", "清香 · 纯洁 · 敏感的心"]],
+    detail: "识别依据：单侧花序、漏斗状花被筒、6 枚近圆形花被片、细而有分枝的花茎，是鸢尾科香雪兰属的组合特征；这一枝上方的紫粉色花朵与下方成串花苞，正是切花香雪兰的标准花枝形态。习性：球茎植物，秋季下种、春季开花，昼夜温差大时香气最明显，切花可插 7—10 天。张合手掌，整枝花会同步在盛开与含苞之间移动。",
+    source: "https://www.rhs.org.uk/plants/freesia" },
+  { name: "粉色百合<br /><i>Lily · In Motion</i>", label: "百合科百合属 · Lilium", short: "粉色百合", meaning: "纯洁 · 庄严 · 百年好合", kind: "frames", folder: "lily", image: "./assets/seedance/lily/flower_00.webp",
+    intro: "六枚披针形花被片先端外翻、瓣身向上卷起，粉白渐变的花瓣内面撒着深红色细斑；中心另有一小簇白色瓣片与淡绿色花丝、三裂柱头，让花心比外围更厚。花蕾是细长的梭形，颜色从青绿过渡到浅粉。",
+    facts: [["学名", "Lilium（百合属园艺杂交种）"], ["科属", "百合科 Liliaceae · 百合属"], ["花期", "5—7 月，单朵开 5—8 天"], ["原产", "北半球温带：中国、日本、欧洲、北美"], ["花语", "纯洁 · 庄严 · 百年好合"]],
+    detail: "识别依据：6 枚花被片（3 外 + 3 内）、瓣基成片的深色斑点、细长花丝与三裂柱头，是百合属的辨识特征；花瓣内面的斑点只在百合属稳定出现，石蒜科与天南星科的花不具这一结构。习性：鳞茎植物，喜光、需低温春化，花大而香，是夏季切花主力。这组 29 帧由盛开走向花苞，手掌开合控制它停留的开放程度。",
+    source: "https://www.rhs.org.uk/plants/lilies/how-to-grow-lilies" },
+  { name: "粉色芍药<br /><i>Peony · In Motion</i>", label: "芍药科芍药属 · Paeonia lactiflora", short: "粉色芍药", meaning: "情有独钟 · 依依惜别", kind: "frames", folder: "peony", image: "./assets/seedance/peony/flower_00.webp",
+    intro: "花朵大而松软：外层几枚宽卵形花被片先端起波浪，颜色从瓣缘的粉收到瓣根的乳白；向内的瓣片越收越小、边缘起细褶，花心立着一圈奶白色瓣化雄蕊和金黄色雌蕊，构成层层包裹的花型。花蕾圆球形，被青绿色萼片紧裹。",
+    facts: [["学名", "Paeonia lactiflora"], ["科属", "芍药科 Paeoniaceae · 芍药属"], ["花期", "5 月，单朵开 5—7 天"], ["原产", "中国北方、西伯利亚、朝鲜半岛"], ["花语", "情有独钟 · 依依惜别"]],
+    detail: "识别依据：宽大波缘的外瓣、向内逐渐细碎的瓣化雄蕊、花心露出的金黄雌蕊、圆球花蕾与青绿萼片，这一组结构是芍药属重瓣型（千层类）的标准形态；单枝单朵、花葶直立，符合切花芍药。习性：多年生草本，秋植春发，5 月开花，是中国传统名花，与牡丹的区别在木质与草质茎。手掌张合让它在盛开与紧裹的花苞之间移动。",
+    source: "https://www.rhs.org.uk/plants/peony/herbaceous/growing-guide" },
 ];
 const CONNECTIONS = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]];
 const $ = (selector) => document.querySelector(selector);
@@ -62,7 +82,7 @@ function selectFlower(index, animate = true) {
     const flower = FLOWERS[next], count = String(next + 1).padStart(2, "0");
     $("#flower-count").textContent = count; $("#flower-no").textContent = count;
     $("#flower-title").innerHTML = flower.name; $("#flower-meaning").textContent = flower.meaning;
-    $("#flower-info-button").setAttribute("aria-label", `了解${flower.label}`);
+    $("#flower-info-button").setAttribute("aria-label", `了解${flower.short}`);
     if (dialog.open) updateFlowerDialog();
     stage.classList.toggle("is-pair", flower.kind === "pair"); stage.classList.remove("has-image");
     page.classList.remove("is-demo-pair");
@@ -70,7 +90,7 @@ function selectFlower(index, animate = true) {
     if (flower.kind === "pair") { bud.src = flower.bud; open.src = flower.open; }
     else { bud.removeAttribute("src"); open.removeAttribute("src"); showFrame(Math.round((1 - state.openness) * 28)); }
     if (state.mode === "demo") { state.demoStartedAt = performance.now(); page.classList.toggle("is-demo-pair", flower.kind === "pair"); }
-    note.textContent = `已切换至${flower.label} · 张合手掌控制开合`;
+    note.textContent = `已切换至${flower.short} · 张合手掌控制开合`;
     stage.classList.remove("is-switching");
   };
   if (animate) { stage.classList.add("is-switching"); state.transitionTimer = setTimeout(apply, 280); }
@@ -78,12 +98,14 @@ function selectFlower(index, animate = true) {
 }
 function updateFlowerDialog() {
   const uploaded = stage.classList.contains("has-image");
-  const flower = uploaded ? { label: "你上传的花朵", image: state.customUrl, intro: "这是你刚刚加入 FLORA 的花朵素材。", detail: "网页会在本机浏览器中展示这张图片；由于只有一张静态图，手势控制的是大小变化，而不是逐帧花瓣形变。若想获得真正的开合过程，需要提供花苞与盛开素材或一段开合视频。" } : FLOWERS[state.species];
+  const flower = uploaded ? { label: "本机上传 · 自定义花朵", short: "你上传的花朵", image: state.customUrl, intro: "这是你刚刚加入 FLORA 的花朵素材。", facts: [["来源", "你在本机选择的图片文件"], ["控制方式", "单张静态图 · 手势控制大小"]], detail: "网页会在本机浏览器中展示这张图片；由于只有一张静态图，手势控制的是大小变化，而不是逐帧花瓣形变。若想获得真正的开合过程，需要提供花苞与盛开素材或一段开合视频。" } : FLOWERS[state.species];
   $("#dialog-flower-number").textContent = uploaded ? "FLORA / YOUR FLOWER" : `FLORA / ${String(state.species + 1).padStart(2, "0")}`;
-  $("#dialog-flower-name").textContent = flower.label;
+  $("#dialog-flower-label").textContent = flower.label;
+  $("#dialog-flower-name").textContent = flower.short;
   $("#dialog-flower-image").src = flower.image;
-  $("#dialog-flower-image").alt = `${flower.label}盛开的图像`;
+  $("#dialog-flower-image").alt = `${flower.short}盛开的图像`;
   $("#dialog-flower-intro").textContent = flower.intro;
+  $("#dialog-flower-facts").innerHTML = (flower.facts || []).map(([key, value]) => `<dt>${key}</dt><dd>${value}</dd>`).join("");
   $("#dialog-flower-detail").textContent = flower.detail;
   const source = $("#dialog-flower-source");
   source.hidden = !flower.source;
@@ -171,7 +193,7 @@ function playDemo() {
   state.mode = "demo"; state.demoStartedAt = performance.now();
   demoButton.textContent = "暂停花开"; setLabel("花开花合", true);
   if (FLOWERS[state.species].kind === "pair") page.classList.add("is-demo-pair");
-  note.textContent = `${FLOWERS[state.species].label}的缓缓呼吸`;
+  note.textContent = `${FLOWERS[state.species].short}的缓缓呼吸`;
 }
 function loadFlower(file) {
   if (!file) return;
