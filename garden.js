@@ -1,5 +1,5 @@
 import { assignHands, HandOpenness, SecondHandSwipe } from "./gesture-core.js";
-import { createWither } from "./wither.js";
+import { createWither, WITHER_PROFILES } from "./wither.js";
 
 /* 凋零：同一朵花完整开合过 WITHER_MIN_CYCLES 次之后，每次再开到最盛都有 WITHER_CHANCE 的概率
  * 在下一段合拢里凋零。?wither=1 / ?wither=0 可强制开启或关闭，用于测试。 */
@@ -105,6 +105,24 @@ function observeBloom(openness) {
   if (state.roll && openness < 0.62) { startWither(); return; }
   if (openness < 0.3) { state.cycles += 1; state.peaked = false; state.roll = null; }
 }
+/* 凋零要倒放 from -> closeTo 这一段帧。如果这些帧还在网络路上，canvas 会画出空白，
+ * 所以先把这一段预取好（最多等 4s），再开始凋零。 */
+function preloadWitherFrames(fromIndex, toIndex) {
+  if (stage.classList.contains("has-image")) return Promise.resolve();
+  const lo = Math.min(fromIndex, toIndex);
+  const hi = Math.max(fromIndex, toIndex);
+  const load = (src) => new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve();
+    img.onerror = () => resolve();
+    img.src = src;
+  });
+  const jobs = [];
+  for (let i = lo; i <= hi; i += 1) jobs.push(load(frameUrl(state.species, i)));
+  const timeout = new Promise((resolve) => setTimeout(resolve, 4000));
+  return Promise.race([Promise.all(jobs), timeout]);
+}
+
 async function startWither() {
   if (state.withering) return;
   const customFlower = stage.classList.contains("has-image");
@@ -124,9 +142,12 @@ async function startWither() {
     note.textContent = "花已凋零 · 重新张开手掌，再养一朵";
     setLabel(state.mode === "camera" ? "请把手放入画面" : "等待开始", state.mode === "camera");
   }, 16000);
+  const fromIndex = state.currentFrame ?? 0;
+  const profile = WITHER_PROFILES[witherProfileKey()] || {};
+  await preloadWitherFrames(fromIndex, profile.closeTo ?? fromIndex);
   const finished = await state.wither.play({
     img: customFlower ? custom : animation,
-    from: state.currentFrame ?? 0,
+    from: fromIndex,
     profileKey: witherProfileKey(),
     setFrame: customFlower ? null : (index) => showFrame(index),
   });
