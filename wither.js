@@ -24,20 +24,20 @@ const smoothstep = (a, b, t) => {
   return x * x * (3 - 2 * x);
 };
 
-const A_END = 0.66; // 合拢段占整段凋零的比例
+const A_END = 0.56; // 前半段失水收拢，后半段留足下垂、脱落或散瓣的时间
 
 export const WITHER_PROFILES = {
   /* 孤挺花：花被片宽厚，先一层层合拢、花喉发黄，最后整朵往下沉 */
-  original: { duration: 7200, closeTo: 22, sag: 0.055, grade: { sat: 0.62, bri: 0.965, sepia: 0.20, hue: -5 }, finale: "settle" },
+  original: { duration: 7600, closeTo: 22, sag: 0.06, grade: { sat: 0.42, bri: 0.79, sepia: 0.33, hue: -5 }, finale: "settle" },
   /* 白山茶：花冠厚实，合拢后整朵脱落（不散瓣），所以是 fall */
-  white: { duration: 6600, closeTo: 21, sag: 0.035, grade: { sat: 0.66, bri: 0.975, sepia: 0.22, hue: -4 }, finale: "settle" },
+  white: { duration: 7200, closeTo: 18, sag: 0.035, grade: { sat: 0.50, bri: 0.83, sepia: 0.27, hue: -4 }, finale: "fall" },
   /* 香雪兰：花朵小、失水快，先垂头再收成细长的枯花，黄得最明显 */
-  purple: { duration: 6200, closeTo: 23, sag: 0.045, grade: { sat: 0.6, bri: 0.97, sepia: 0.24, hue: 6 }, finale: "settle" },
+  purple: { duration: 7800, closeTo: 23, sag: 0.08, grade: { sat: 0.42, bri: 0.77, sepia: 0.35, hue: 6 }, finale: "settle" },
   /* 百合：花瓣薄长，从瓣尖开始干枯卷缩，垂得最明显 */
-  lily: { duration: 7400, closeTo: 17, sag: 0.062, grade: { sat: 0.6, bri: 0.965, sepia: 0.22, hue: -7 }, finale: "settle" },
+  lily: { duration: 8600, closeTo: 14, sag: 0.10, grade: { sat: 0.39, bri: 0.76, sepia: 0.34, hue: -7 }, finale: "shatter" },
   /* 芍药：花瓣多而散，合拢之后一碰即碎，所以是 shatter */
-  peony: { duration: 6800, closeTo: 19, sag: 0.04, grade: { sat: 0.64, bri: 0.97, sepia: 0.2, hue: -4 }, finale: "settle" },
-  custom: { duration: 6000, closeTo: 20, sag: 0.05, grade: { sat: 0.62, bri: 0.97, sepia: 0.21, hue: -5 }, finale: "settle" },
+  peony: { duration: 8200, closeTo: 13, sag: 0.05, grade: { sat: 0.43, bri: 0.80, sepia: 0.30, hue: -4 }, finale: "shatter" },
+  custom: { duration: 7000, closeTo: 20, sag: 0.05, grade: { sat: 0.48, bri: 0.83, sepia: 0.28, hue: -5 }, finale: "settle" },
 };
 
 export function createWither(stage) {
@@ -158,6 +158,7 @@ export function createWither(stage) {
     const from = Math.max(0, Math.min(28, opts.from ?? 0));
     const closeTo = Math.max(0, Math.min(28, profile.closeTo));
     const setFrame = typeof opts.setFrame === "function" ? opts.setFrame : () => {};
+    const frames = Array.isArray(opts.frames) ? opts.frames : null;
     const duration = reduced ? Math.min(2400, profile.duration) : profile.duration;
 
     const nw = img.naturalWidth;
@@ -179,9 +180,8 @@ export function createWither(stage) {
 
     activeImg = img;
     img.style.transition = "opacity .5s ease";
-    img.style.opacity = "0";
     layer.style.transition = "opacity .5s ease";
-    layer.style.opacity = "1";
+    layer.style.opacity = "0";
     running = true;
     stage.classList.add("is-withering");
 
@@ -217,6 +217,7 @@ export function createWither(stage) {
       const started = performance.now();
       let pendingFrame = from;
       let drawnFrame = -1;
+      let handedOff = false;
       let snap = null;
       const snapCanvas = document.createElement("canvas");
       const snapCtx = snapCanvas.getContext("2d");
@@ -229,15 +230,18 @@ export function createWither(stage) {
           const closing = t < A_END;
           const a = closing ? easeInOutSine(t / A_END) : 1;
           const idx = closing ? Math.round(from + (closeTo - from) * a) : closeTo;
-          if (idx !== pendingFrame) { pendingFrame = idx; setFrame(idx); }
+          if (idx !== pendingFrame) {
+            pendingFrame = idx;
+            if (!frames) setFrame(idx);
+          }
           const b = closing ? 0 : (t - A_END) / (1 - A_END);
           const amount = closing ? a : 0.75 + 0.25 * b;
           if (closing) {
-            if (pendingFrame !== drawnFrame && img.complete && img.naturalWidth) {
+            if (pendingFrame !== drawnFrame && (frames?.[idx] || (img.complete && img.naturalWidth))) {
               drawnFrame = pendingFrame;
-              fill((c, W, H) => sagMatrix(c, W, H, amount), 1, tint, null);
+              fill((c, W, H) => sagMatrix(c, W, H, amount), 1, tint, frames?.[idx] ?? null);
             }
-          } else if (img.complete && img.naturalWidth) {
+          } else if (frames?.[closeTo] || (img.complete && img.naturalWidth)) {
             /* 收尾段：整朵继续往里缩、往下塌，同时慢慢失掉些血色（透明度），
              * 这样“凋零”和“用手把花合上”一眼就能区分开 */
             const shrink = 1 - 0.02 - 0.15 * b;
@@ -247,7 +251,7 @@ export function createWither(stage) {
               c.translate(0, H * profile.sag * amount);
               c.scale(shrink, shrink);
               c.translate(-W / 2, -H * 0.94);
-            }, alpha, tint, null);
+            }, alpha, tint, frames?.[closeTo] ?? null);
           }
         } else {
           const b = (t - A_END) / (1 - A_END);
@@ -262,22 +266,28 @@ export function createWither(stage) {
           }
           if (profile.finale === "fall") {
             const drop = smoothstep(0, 1, b);
-            const alpha = 1 - smoothstep(0.55, 1, b);
+            const alpha = 1 - 0.74 * smoothstep(0.15, 1, b);
             fill((c, W, H) => {
               sagMatrix(c, W, H, 0.8 + 0.2 * b, b);
-              c.translate(easeInCubic(drop) * W * 0.06, easeInCubic(drop) * H * 0.92);
+              c.translate(easeInCubic(drop) * W * 0.06, easeInCubic(drop) * H * 0.36);
               c.rotate(-0.13 * drop);
             }, alpha, tint, snapCanvas);
           } else {
-            fill((c, W, H) => sagMatrix(c, W, H, 0.8 + 0.2 * b, b), 1 - 0.45 * b, tint, snapCanvas);
-            drawShatter(snapCanvas, b);
+            fill((c, W, H) => sagMatrix(c, W, H, 0.8 + 0.2 * b, b), 1 - 0.66 * b, tint, snapCanvas);
+            drawShatter(snapCanvas, b, opts.profileKey);
           }
+        }
+        if (!handedOff && (drawnFrame >= 0 || t >= A_END)) {
+          handedOff = true;
+          img.style.opacity = "0";
+          layer.style.opacity = "1";
         }
         if (t < 1) {
           raf = requestAnimationFrame(step);
           return;
         }
         raf = 0;
+        setFrame(closeTo);
         /* 停在最后一帧：画布留着这张枯掉的花，帧图仍然藏着，
            等手掌再次张开时由 release() 把画面交还给帧序列。 */
         stage.classList.remove("is-withering");
@@ -290,24 +300,25 @@ export function createWither(stage) {
     });
   }
 
-  /* 芍药：花瓣按竖条带散落 */
-  function drawShatter(snapCanvas, b) {
-    const slabs = 9;
-    for (let i = 0; i < slabs; i += 1) {
-      const seed = ((i * 9301 + 49297) % 233280) / 233280;
-      const dir = i % 2 === 0 ? -1 : 1;
-      const fall = easeInCubic(b) * layer.height * (0.2 + seed * 0.28);
-      const drift = dir * easeInCubic(b) * layer.width * (0.03 + seed * 0.07);
-      const rot = dir * easeInCubic(b) * (0.12 + seed * 0.22);
+  /* 每朵花的花瓣区域和落点不同；裁剪与图像使用同一坐标变换，避免硬直条带。 */
+  function drawShatter(snapCanvas, b, key) {
+    const petals = key === "lily"
+      ? [[.20,.38,.17,.11,-.18,.63,-.7],[.76,.37,.18,.10,.22,.55,.65],[.26,.66,.15,.13,-.13,.43,-.5],[.71,.66,.17,.12,.18,.49,.6]]
+      : [[.16,.28,.18,.16,-.17,.58,-.6],[.43,.16,.18,.13,-.07,.46,-.4],[.77,.24,.18,.17,.18,.51,.5],[.18,.55,.19,.15,-.18,.59,-.7],[.78,.57,.20,.16,.19,.56,.7],[.40,.73,.18,.12,-.10,.38,-.3],[.61,.72,.18,.12,.12,.42,.3]];
+    for (let i = 0; i < petals.length; i += 1) {
+      const [x, y, rx, ry, dx, dy, rot] = petals[i];
+      const local = clamp01((b - i * .055) / (1 - i * .055));
+      const move = easeInCubic(local);
       ctx.save();
       ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.globalAlpha = Math.max(0, 1 - Math.pow(b, 1.25)) * 0.92;
+      ctx.globalAlpha = (1 - smoothstep(.65, 1, local)) * .94;
+      ctx.translate((x + dx * move) * layer.width, (y + dy * move) * layer.height);
+      ctx.rotate(rot * move);
+      ctx.translate(-x * layer.width, -y * layer.height);
       ctx.beginPath();
-      ctx.rect((i / slabs) * layer.width, 0, layer.width / slabs + 1, layer.height);
+      ctx.ellipse(x * layer.width, y * layer.height, rx * layer.width, ry * layer.height, 0, 0, Math.PI * 2);
       ctx.clip();
-      ctx.translate(layer.width / 2 + drift, layer.height * 0.42 + fall);
-      ctx.rotate(rot);
-      ctx.drawImage(snapCanvas, -layer.width / 2, -layer.height * 0.42, layer.width, layer.height);
+      ctx.drawImage(snapCanvas, 0, 0);
       ctx.restore();
     }
   }
