@@ -75,3 +75,8 @@
 .dialog-facts dd{margin:0;font:12px/1.8 var(--han);color:#4b5046}
 .dialog-detail{font-size:12.5px;line-height:2.05}
 @media(max-width:650px){.dialog-facts{grid-template-columns:1fr;gap:1px;margin-bottom:16px}.dialog-facts dd{margin:0 0 9px}.dialog-detail{line-height:1.95}}
+/* 凋零层：合拢段直接在帧图上做（filter/transform），落瓣/脱落的收尾才用 canvas，
+   与原逐帧图共用同一底部渐隐遮罩 */
+.bloom-stage .wither-layer{position:absolute;z-index:2;pointer-events:none;opacity:0;-webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 87%,transparent 100%);mask-image:linear-gradient(to bottom,#000 0%,#000 87%,transparent 100%)}
+.bloom-stage img{transition:opacity .5s ease}
+.experience.is-withering .interaction-note{color:#8d8377;letter-spacing:.16em}

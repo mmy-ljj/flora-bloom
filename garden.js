@@ -1,4 +1,12 @@
 import { assignHands, HandOpenness, SecondHandSwipe } from "./gesture-core.js";
+import { createWither } from "./wither.js";
+
+/* 凋零：同一朵花完整开合过 WITHER_MIN_CYCLES 次之后，每次再开到最盛都有 WITHER_CHANCE 的概率
+ * 在下一段合拢里凋零。?wither=1 / ?wither=0 可强制开启或关闭，用于测试。 */
+const WITHER_CHANCE = 0.3;
+const WITHER_MIN_CYCLES = 2;
+const witherFlag = new URLSearchParams(location.search).get("wither");
+const FORCED_WITHER = witherFlag === "1" ? 1 : witherFlag === "0" ? 0 : null;
 
 const MODEL_URL = new URL("./assets/mediapipe/hand_landmarker.task", import.meta.url).href;
 const WASM_URL = new URL("./assets/mediapipe/wasm", import.meta.url).href;
@@ -41,7 +49,9 @@ const mainGesture = new HandOpenness(), secondGesture = new HandOpenness({ smoot
 if (debug && new URLSearchParams(location.search).has("debug")) debug.hidden = false;
 const dialog = $("#flower-dialog");
 const state = { mode: "idle", stream: null, tracker: null, lastFrameTime: -1,
-  transitionTimer: null, customUrl: null, frames: {}, currentFrame: null, openness: 1, demoStartedAt: null, species: 0, primaryPalm: null };
+  transitionTimer: null, customUrl: null, frames: {}, currentFrame: null, openness: 1, demoStartedAt: null, species: 0, primaryPalm: null,
+  cycles: 0, peaked: false, roll: null, withering: false };
+state.wither = createWither(stage);
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const frameUrl = (species, index) => FLOWERS[species].folder === "original"
   ? `./assets/frames/flower_${String(index).padStart(2, "0")}.webp`
@@ -71,11 +81,59 @@ function setOpenness(value) {
   page.style.setProperty("--bud-scale", (.78 + openness * .12).toFixed(3));
   page.style.setProperty("--open-scale", (.76 + openness * .24).toFixed(3));
   page.style.setProperty("--flower-scale", stage.classList.contains("has-image") ? (.72 + openness * .28).toFixed(3) : "1");
-  if (FLOWERS[state.species].kind === "frames") showFrame(Math.round((1 - openness) * 28));
+  if (!state.withering && FLOWERS[state.species].kind === "frames") showFrame(Math.round((1 - openness) * 28));
+  observeBloom(openness);
   palmValue.textContent = `${Math.round(openness * 100)}%`; palmProgress.style.width = `${Math.round(openness * 100)}%`;
+}
+const currentFlower = () => FLOWERS[state.species];
+function witherProfileKey() {
+  if (stage.classList.contains("has-image")) return "custom";
+  return currentFlower().folder === "original" ? "original" : currentFlower().folder;
+}
+function witherChance() { return FORCED_WITHER === null ? WITHER_CHANCE : FORCED_WITHER; }
+function observeBloom(openness) {
+  if (state.withering) return;
+  if (openness > 0.92) {
+    state.peaked = true;
+    if (state.roll === null) state.roll = state.cycles >= WITHER_MIN_CYCLES && Math.random() < witherChance();
+  }
+  if (!state.peaked) return;
+  if (state.roll && openness < 0.62) { startWither(); return; }
+  if (openness < 0.3) { state.cycles += 1; state.peaked = false; state.roll = null; }
+}
+async function startWither() {
+  if (state.withering) return;
+  const customFlower = stage.classList.contains("has-image");
+  state.withering = true; state.peaked = false; state.roll = null;
+  page.classList.add("is-withering");
+  setLabel("花在凋零", false);
+  note.textContent = `${customFlower ? "这朵花" : currentFlower().short}正在凋零…`;
+  const finished = await state.wither.play({
+    img: customFlower ? custom : animation,
+    from: state.currentFrame ?? 0,
+    profileKey: witherProfileKey(),
+    setFrame: customFlower ? null : (index) => showFrame(index),
+  });
+  state.wither.stop();
+  if (!finished) return;
+  state.withering = false; state.cycles = 0; state.peaked = false; state.roll = null;
+  page.classList.remove("is-withering");
+  /* 停在凋零后的那一帧上，不硬切回花苞：下一次张开手掌时帧序列会从这里继续往前走，
+   * 画面因此没有跳变。 */
+  if (state.mode === "demo") state.demoStartedAt = performance.now();
+  note.textContent = "花已凋零 · 重新张开手掌，再养一朵";
+  setLabel(state.mode === "camera" ? "请把手放入画面" : "等待开始", state.mode === "camera");
+}
+function abortWither() {
+  if (!state.withering) return;
+  state.withering = false;
+  page.classList.remove("is-withering");
+  state.wither.stop();
+  state.cycles = 0; state.peaked = false; state.roll = null;
 }
 function selectFlower(index, animate = true) {
   const next = (index + FLOWERS.length) % FLOWERS.length;
+  abortWither();
   clearTimeout(state.transitionTimer);
   const apply = () => {
     state.species = next;
@@ -146,11 +204,16 @@ function readHand(result, now) {
   if (switching.triggered) selectFlower(state.species + 1);
   if (debug) debug.textContent = `主手 ${reading.visible ? Math.round((reading.openness ?? 0) * 100) + "%" : "未识别"} · 第二只手 ${other.visible ? Math.round((other.openness ?? 0) * 100) + "%" : "未识别"} · 左滑 ${Math.round(switching.progress * 100)}% · 花种 ${state.species + 1}`;
 }
-if (debug && !debug.hidden) window.__floraDebug = { readHand, selectFlower };
+if (debug && !debug.hidden) window.__floraDebug = {
+  readHand, selectFlower, wither: startWither, abortWither,
+  get bloomState() { return { mode: state.mode, cycles: state.cycles, withering: state.withering, frame: state.currentFrame }; },
+};
 function track(now) {
-  if (state.mode === "demo" && FLOWERS[state.species].kind === "frames") {
+  if (state.mode === "demo" && FLOWERS[state.species].kind === "frames" && !state.withering) {
     const phase = ((now - state.demoStartedAt) % 7000) / 7000;
-    showFrame(Math.round((1 - Math.cos(phase * Math.PI * 2)) * 14));
+    const openness = (1 - Math.cos(phase * Math.PI * 2)) / 2;
+    showFrame(Math.round((1 - openness) * 28));
+    observeBloom(openness);
   }
   if (state.mode === "camera" && state.tracker && camera.readyState >= 2 && camera.currentTime !== state.lastFrameTime) {
     try { const result = state.tracker.detectForVideo(camera, now); state.lastFrameTime = camera.currentTime; readHand(result, now); }
@@ -168,6 +231,7 @@ async function getTracker() {
   return state.tracker;
 }
 function stopCamera() {
+  abortWither();
   state.stream?.getTracks().forEach((track) => track.stop());
   state.stream = null; camera.srcObject = null; state.mode = "idle"; state.lastFrameTime = -1; state.primaryPalm = null;
   mainGesture.reset(); secondGesture.reset(); switcher.reset(); context.clearRect(0, 0, canvas.width, canvas.height);
@@ -182,12 +246,14 @@ async function startCamera() {
     state.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
     camera.srcObject = state.stream; await camera.play(); state.mode = "camera";
     mainGesture.reset(); secondGesture.reset(); switcher.reset(); state.primaryPalm = null;
+    state.cycles = 0; state.peaked = false; state.roll = null;
     demoButton.textContent = "播放花开"; page.classList.add("is-camera"); cameraButton.textContent = "关闭手势";
     note.textContent = "主手开合控制花瓣；第二只手向左滑切换花种"; setLabel("请把手放入画面", true);
   } catch (error) { console.error("Camera unavailable", error); stopCamera(); setLabel("摄像头未开启"); note.textContent = "请允许摄像头访问，或点击播放花开"; }
   finally { cameraButton.disabled = false; }
 }
 function playDemo() {
+  abortWither();
   if (state.mode === "camera") stopCamera();
   if (state.mode === "demo") { state.mode = "idle"; page.classList.remove("is-demo-pair"); demoButton.textContent = "播放花开"; setLabel("等待开始"); if (FLOWERS[state.species].kind === "frames") { state.currentFrame = null; showFrame(0); } return; }
   state.mode = "demo"; state.demoStartedAt = performance.now();
