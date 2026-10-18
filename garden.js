@@ -71,6 +71,8 @@ async function preloadFrames() {
 function setLabel(label, active = false) { indicator.innerHTML = `<i></i> ${label}`; indicator.classList.toggle("is-live", active); }
 function showFrame(index) {
   if (FLOWERS[state.species].kind !== "frames" || stage.classList.contains("has-image") || index === state.currentFrame) return;
+  /* 凋零结束后画布停在枯态：下一次真正开始换帧（手掌张开 / 演示重开 / 换花种）时交还画面 */
+  if (!state.withering && state.wither && state.wither.held) state.wither.release();
   animation.src = state.frames[state.species]?.[index]?.src ?? frameUrl(state.species, index); state.currentFrame = index;
 }
 function setOpenness(value) {
@@ -81,7 +83,9 @@ function setOpenness(value) {
   page.style.setProperty("--bud-scale", (.78 + openness * .12).toFixed(3));
   page.style.setProperty("--open-scale", (.76 + openness * .24).toFixed(3));
   page.style.setProperty("--flower-scale", stage.classList.contains("has-image") ? (.72 + openness * .28).toFixed(3) : "1");
-  if (!state.withering && FLOWERS[state.species].kind === "frames") showFrame(Math.round((1 - openness) * 28));
+  if (!state.withering && FLOWERS[state.species].kind === "frames") {
+    showFrame(Math.round((1 - openness) * 28));
+  }
   observeBloom(openness);
   palmValue.textContent = `${Math.round(openness * 100)}%`; palmProgress.style.width = `${Math.round(openness * 100)}%`;
 }
@@ -127,7 +131,8 @@ async function startWither() {
     setFrame: customFlower ? null : (index) => showFrame(index),
   });
   clearTimeout(state.witherGuard);
-  state.wither.stop();
+  /* play() 正常收尾时画布要留着（停在枯态），只有没跑完才需要强制清场 */
+  if (!finished) state.wither.stop();
   state.withering = false;
   page.classList.remove("is-withering");
   state.cycles = 0; state.peaked = false; state.roll = null;

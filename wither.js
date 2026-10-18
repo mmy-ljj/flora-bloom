@@ -55,6 +55,7 @@ export function createWither(stage) {
   let timer = 0;
   let settleResolve = null;
   let activeImg = null;
+  let held = false;
 
   const clearTimers = () => {
     cancelAnimationFrame(raf);
@@ -62,6 +63,23 @@ export function createWither(stage) {
     raf = 0;
     timer = 0;
   };
+
+  function release() {
+    if (!held) return;
+    held = false;
+    layer.style.transition = "opacity .45s ease";
+    layer.style.opacity = "0";
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      running = false;
+      releaseImage();
+      stage.classList.remove("is-withered");
+      if (layer.width) {
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, layer.width, layer.height);
+      }
+    }, 470);
+  }
 
   function releaseImage() {
     if (!activeImg) return;
@@ -73,6 +91,7 @@ export function createWither(stage) {
   function resetLayer() {
     clearTimers();
     running = false;
+    held = false;
     releaseImage();
     layer.style.transition = "";
     layer.style.opacity = "0";
@@ -259,19 +278,13 @@ export function createWither(stage) {
           return;
         }
         raf = 0;
-        /* 收尾：枯掉的花先停一拍，再把画布淡出、帧图淡入，交还给下一次张开手掌 */
+        /* 停在最后一帧：画布留着这张枯掉的花，帧图仍然藏着，
+           等手掌再次张开时由 release() 把画面交还给帧序列。 */
         stage.classList.remove("is-withering");
         stage.classList.add("is-withered");
-        timer = setTimeout(() => {
-          layer.style.transition = "opacity .7s ease";
-          layer.style.opacity = "0";
-          releaseImage();
-          timer = setTimeout(() => {
-            running = false;
-            settleResolve = null;
-            resolve(true);
-          }, 780);
-        }, 900);
+        held = true;
+        settleResolve = null;
+        resolve(true);
       };
       raf = requestAnimationFrame(step);
     });
@@ -301,7 +314,9 @@ export function createWither(stage) {
 
   return {
     play,
+    release,
     stop: resetLayer,
+    get held() { return held; },
     get running() { return running; },
     get element() { return layer; },
   };
