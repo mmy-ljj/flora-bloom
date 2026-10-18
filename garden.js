@@ -211,4 +211,9 @@ $("#dialog-close").addEventListener("click", () => dialog.close());
 dialog.addEventListener("click", (event) => { if (event.target === dialog) dialog.close(); });
 $("#flower-file").addEventListener("change", (event) => loadFlower(event.target.files?.[0]));
 window.addEventListener("beforeunload", () => { stopCamera(); if (state.customUrl) URL.revokeObjectURL(state.customUrl); state.tracker?.close(); });
+const flowerQuery = new URLSearchParams(location.search).get("flower");
+if (flowerQuery) {
+  const flowerIndex = Number(flowerQuery);
+  if (Number.isInteger(flowerIndex) && flowerIndex >= 1 && flowerIndex <= FLOWERS.length) selectFlower(flowerIndex - 1, false);
+}
 requestAnimationFrame(track);

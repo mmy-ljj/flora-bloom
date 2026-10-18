@@ -31,11 +31,24 @@ Open the site and it works with no network calls outside this repository.
 
 每朵花的详情弹窗里附有形态描述、识别依据（逐帧比对的特征）、习性与花语；文字中不含推测性措辞，鉴定结论直接给出。
 
+## 站点结构（导航四项都已补齐）
+
+| 导航 | 页面 | 内容 |
+|---|---|---|
+| STUDIES | `studies.html` | 判种方法（五项形态判据）、五份研究条目、手势算法（21 关键点 → 张开度 → 29 帧映射）、素材清单、资料出处 |
+| POETRY | `poetry.html` | 苏轼《邵伯梵行寺山茶》、韩愈《芍药》、姜夔《扬州慢》摘句、陆游咏百合七绝（均标集本与异文），另说明香雪兰与孤挺花为何没有旧体诗 |
+| COLLECTION | `collection.html` | 五个花种卡片：29 帧、尺寸体积、花期原产、从盛开帧取出的三种主色，可一键跳回花开页对应花种（`?flower=1..5`） |
+| BLOOM | `index.html` | 花开交互本体：手势开合、切换花种、上传花朵 |
+
 ## Layout
 
 ```
-index.html            page shell
+index.html            page shell (BLOOM)
+studies.html          STUDIES · 花的研究
+poetry.html           POETRY · 花与诗
+collection.html       COLLECTION · 花集
 styles.css            styles
+pages.css             styles for the three content pages
 garden.js             bloom logic + hand tracking (ES module)
 gesture-core.js       hand math helpers
 fonts.local.css       @font-face for the self-hosted fonts
