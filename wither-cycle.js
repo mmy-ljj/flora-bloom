@@ -14,16 +14,26 @@ export class WitherCycle {
     this.candidate = null;
     this.candidateAt = 0;
     this.triggered = false;
+    this.closeDrawn = false;
   }
 
   interrupt() {
     // A tracking gap cannot complete a half-finished breath with a different hand.
     this.phase = "await-open";
     this.candidate = null;
+    this.closeDrawn = false;
   }
 
   update(openness, now) {
     if (this.triggered || !Number.isFinite(openness)) return { cycles: this.cycles, triggered: false };
+    // Draw while a new closing gesture is under way, not after it has reopened.
+    // The first two full breaths establish intent; the third descent can wilt.
+    if (this.phase === "open" && this.cycles >= this.minCycles - 1 && openness <= .82 && !this.closeDrawn) {
+      this.closeDrawn = true;
+      const triggered = this.random() < this.chance;
+      if (triggered) this.triggered = true;
+      if (triggered) return { cycles: this.cycles, triggered: true };
+    }
     const target = this.phase === "open" ? "closed" : "open";
     const crossed = target === "closed" ? openness <= .25 : openness >= .86;
     if (!crossed) {
@@ -42,9 +52,8 @@ export class WitherCycle {
     }
     const completed = this.phase === "closed";
     this.phase = "open";
+    this.closeDrawn = false;
     if (completed) this.cycles += 1;
-    const triggered = completed && this.cycles >= this.minCycles && this.random() < this.chance;
-    if (triggered) this.triggered = true;
-    return { cycles: this.cycles, triggered };
+    return { cycles: this.cycles, triggered: false };
   }
 }

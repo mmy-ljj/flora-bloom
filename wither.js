@@ -23,7 +23,7 @@ const smoothstep = (a, b, t) => {
   return x * x * (3 - 2 * x);
 };
 
-const A_END = 0.56; // 前半段失水收拢，后半段留足下垂、脱落或散瓣的时间
+const A_END = 0.48; // 收拢未结束时即接入下垂/散瓣，避免两段式停顿
 
 export const WITHER_PROFILES = {
   /* 孤挺花：花被片宽厚，先一层层合拢、花喉发黄，最后整朵往下沉 */
@@ -204,6 +204,18 @@ export function createWither(stage) {
       dryTint(DW, DH, tintK);
     };
 
+    // Snapshot is already graded and positioned. Draw it once, without grading
+    // or sagging a second time, so the handoff has identical boundary pixels.
+    const drawSnapshot = (source, transform, alpha) => {
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, DW, DH);
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      transform(ctx, DW, DH);
+      ctx.drawImage(source, 0, 0);
+      ctx.restore();
+    };
+
     const sagMatrix = (c, W, H, amount, extraB) => {
       c.translate(W / 2, H * 0.94);
       c.translate(0, H * profile.sag * amount);
@@ -228,7 +240,7 @@ export function createWither(stage) {
         if (wiltFrames) {
           const first = wiltFrames[0];
           const index = Math.min(wiltFrames.length - 1, Math.floor(t * (wiltFrames.length - 1)));
-          const blend = smoothstep(0, 0.085, t);
+          const blend = smoothstep(0, 0.055, t);
           ctx.setTransform(1, 0, 0, 1, 0, 0);
           ctx.clearRect(0, 0, DW, DH);
           ctx.globalAlpha = 1 - blend;
@@ -292,13 +304,17 @@ export function createWither(stage) {
           if (profile.finale === "fall") {
             const drop = smoothstep(0, 1, b);
             const alpha = 1 - 0.74 * smoothstep(0.15, 1, b);
-            fill((c, W, H) => {
-              sagMatrix(c, W, H, 0.8 + 0.2 * b, b);
+            drawSnapshot(snapCanvas, (c, W, H) => {
               c.translate(easeInCubic(drop) * W * 0.06, easeInCubic(drop) * H * 0.36);
               c.rotate(-0.13 * drop);
-            }, alpha, tint, snapCanvas);
+            }, alpha);
           } else {
-            fill((c, W, H) => sagMatrix(c, W, H, 0.8 + 0.2 * b, b), 1 - 0.66 * b, tint, snapCanvas);
+            drawSnapshot(snapCanvas, (c, W, H) => {
+              c.translate(0, H * profile.sag * 0.3 * b);
+              c.translate(W / 2, H * 0.94);
+              c.scale(1 - 0.1 * b, 1 - 0.1 * b);
+              c.translate(-W / 2, -H * 0.94);
+            }, 1 - 0.66 * b);
             drawShatter(snapCanvas, b, opts.profileKey);
           }
         }
@@ -336,7 +352,7 @@ export function createWither(stage) {
       const move = easeInCubic(local);
       ctx.save();
       ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.globalAlpha = (1 - smoothstep(.65, 1, local)) * .94;
+      ctx.globalAlpha = smoothstep(0, .16, local) * (1 - smoothstep(.65, 1, local)) * .94;
       ctx.translate((x + dx * move) * layer.width, (y + dy * move) * layer.height);
       ctx.rotate(rot * move);
       ctx.translate(-x * layer.width, -y * layer.height);

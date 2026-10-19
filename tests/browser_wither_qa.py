@@ -43,7 +43,7 @@ with sync_playwright() as playwright:
     page.goto(BASE + "&flower=3", wait_until="domcontentloaded")
     page.locator("#demo-button").click()
     page.wait_for_function("window.__floraDebug.bloomState.withering", timeout=32000)
-    assert page.evaluate("window.__floraDebug.bloomState.cycles") == 3
+    assert page.evaluate("window.__floraDebug.bloomState.cycles") == 2
     page.locator("#demo-button").click()
     assert not failures, failures
     browser.close()

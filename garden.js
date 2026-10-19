@@ -2,7 +2,7 @@ import { assignHands, HandOpenness, SecondHandSwipe } from "./gesture-core.js";
 import { createWither, WITHER_PROFILES } from "./wither.js";
 import { WitherCycle } from "./wither-cycle.js";
 
-/* 完整开合三次后，每次重新盛开时独立抽取 30%；查询参数只调整抽取概率。 */
+/* 两次完整开合后，从第三次合拢途中开始独立抽取 30%。 */
 const WITHER_CHANCE = 0.3;
 const witherFlag = new URLSearchParams(location.search).get("wither");
 const FORCED_WITHER = witherFlag === "1" ? 1 : witherFlag === "0" ? 0 : null;
@@ -57,17 +57,25 @@ const frameUrl = (species, index) => FLOWERS[species].folder === "original"
   ? `./assets/frames/flower_${String(index).padStart(2, "0")}.webp`
   : `./assets/seedance/${FLOWERS[species].folder}/flower_${String(index).padStart(2, "0")}.webp`;
 let lilyWiltFrames = null;
+let lilyWiltRequest = null;
 async function preloadLilyWilt() {
   if (lilyWiltFrames) return lilyWiltFrames;
-  const frames = await Promise.all(Array.from({ length: 81 }, (_, index) => new Promise((resolve) => {
+  if (lilyWiltRequest) return lilyWiltRequest;
+  lilyWiltRequest = Promise.all(Array.from({ length: 81 }, (_, index) => new Promise((resolve) => {
     const image = new Image();
     image.onload = () => resolve(image);
     image.onerror = () => resolve(null);
     image.src = `./assets/wither/lily/wilt_${String(index).padStart(3, "0")}.webp`;
-  })));
-  if (frames.some((frame) => !frame)) throw new Error("Lily wilt frame download failed");
-  lilyWiltFrames = frames;
-  return frames;
+  }))).then((frames) => {
+    if (frames.some((frame) => !frame)) throw new Error("Lily wilt frame download failed");
+    lilyWiltFrames = frames;
+    return frames;
+  }).catch((error) => { lilyWiltRequest = null; throw error; });
+  return lilyWiltRequest;
+}
+function warmWitherAssets(species) {
+  preloadSpeciesFrames(species).catch(() => {});
+  if (FLOWERS[species].folder === "lily") preloadLilyWilt().catch(() => {});
 }
 
 async function preloadSpeciesFrames(species) {
@@ -142,16 +150,12 @@ async function startWither() {
     note.textContent = "花已凋零 · 重新张开手掌，再养一朵";
     setLabel(state.mode === "camera" ? "请把手放入画面" : "等待开始", state.mode === "camera");
   }, 16000);
-  const fromIndex = Math.min(state.currentFrame ?? 0, 2);
+  const fromIndex = state.currentFrame ?? Math.round((1 - state.openness) * 28);
   const profile = WITHER_PROFILES[witherProfileKey()] || {};
-  let frames = null;
-  try { if (!customFlower) frames = await preloadSpeciesFrames(state.species); }
-  catch (error) { console.error("Wither frames unavailable", error); }
-  let wiltFrames = null;
-  if (!customFlower && witherProfileKey() === "lily") {
-    try { wiltFrames = await preloadLilyWilt(); }
-    catch (error) { console.error("Lily wilt video frames unavailable", error); }
-  }
+  // Never hold the visible flower still while a network request finishes.
+  // Prepared footage is used immediately; otherwise start the canvas fallback.
+  const frames = customFlower ? null : state.frames[state.species] ?? null;
+  const wiltFrames = !customFlower && witherProfileKey() === "lily" ? lilyWiltFrames : null;
   if (run !== state.witherRun || !state.withering) return;
   const finished = await state.wither.play({
     img: customFlower ? custom : animation,
@@ -172,7 +176,7 @@ async function startWither() {
   /* 停在凋零结束的那一帧上，不硬切回花苞：下一次手掌张开时帧序自然继续往前，没有跳变 */
   if (state.mode === "demo" && finished) {
     /* 让枯掉的花在原地停一会儿，别刚凋零就立刻又开满 */
-    state.holdUntil = performance.now() + 2400;
+    state.holdUntil = performance.now();
     const match = 1 - (profile.closeTo ?? 20) / 28;
     const phase = Math.acos(1 - 2 * match) / (Math.PI * 2);
     state.demoStartedAt = state.holdUntil - phase * 7000;
@@ -196,6 +200,7 @@ function selectFlower(index, animate = true) {
   clearTimeout(state.transitionTimer);
   const apply = () => {
     state.species = next;
+    warmWitherAssets(next);
     const flower = FLOWERS[next], count = String(next + 1).padStart(2, "0");
     $("#flower-count").textContent = count; $("#flower-no").textContent = count;
     $("#flower-title").innerHTML = flower.name; $("#flower-meaning").textContent = flower.meaning;
@@ -273,8 +278,7 @@ function track(now) {
   if (state.mode === "demo" && FLOWERS[state.species].kind === "frames" && !state.withering && now >= state.holdUntil) {
     const phase = ((now - state.demoStartedAt) % 7000) / 7000;
     const openness = (1 - Math.cos(phase * Math.PI * 2)) / 2;
-    showFrame(Math.round((1 - openness) * 28));
-    if (!state.wither.held) observeBloom(openness, now);
+    setOpenness(openness, now);
   }
   if (state.mode === "camera" && state.tracker && camera.readyState >= 2 && camera.currentTime !== state.lastFrameTime) {
     try { const result = state.tracker.detectForVideo(camera, now); state.lastFrameTime = camera.currentTime; readHand(result, now); }
@@ -315,6 +319,7 @@ async function startCamera() {
 }
 function playDemo() {
   abortWither();
+  state.witherCycle.reset();
   if (state.mode === "camera") stopCamera();
   if (state.mode === "demo") { state.mode = "idle"; page.classList.remove("is-demo-pair"); demoButton.textContent = "播放花开"; setLabel("等待开始"); if (FLOWERS[state.species].kind === "frames") { state.currentFrame = null; showFrame(0); } return; }
   state.mode = "demo"; state.demoStartedAt = performance.now();
@@ -344,3 +349,5 @@ if (flowerQuery) {
   if (Number.isInteger(flowerIndex) && flowerIndex >= 1 && flowerIndex <= FLOWERS.length) selectFlower(flowerIndex - 1, false);
 }
 requestAnimationFrame(track);
+warmWitherAssets(state.species);
+preloadLilyWilt().catch(() => {});
