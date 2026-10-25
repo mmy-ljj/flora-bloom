@@ -43,8 +43,9 @@ Open the site and it works with no network calls outside this repository.
 
 ## 凋零（withering）
 
-同一朵花完成「张开 → 合拢 → 再张开」算一次完整开合。完成 **2 次**后，
+只有**粉色百合**会凋零。完成「张开 → 合拢 → 再张开」**2 次**后，
 从第 **3 次合拢途中**开始独立抽取：**30% 概率**直接进入连续凋零，其余 70% 继续正常开合。
+其余四朵花仅随手掌开合，不参与凋零抽签；`?wither=1` 也不改变这一点。
 闭合和重新张开的姿态都需要稳定约 120 毫秒；手部追踪中断不会补算未完成的开合。
 
 - 想测试必定触发：`index.html?wither=1`（第 3 次合拢途中触发）
@@ -53,35 +54,35 @@ Open the site and it works with no network calls outside this repository.
 
 ### 表现
 
-本版以提供的玫瑰视频为节奏参考；没有把红玫瑰画面直接贴到其他花上。凋零由已有的
-29 帧花态和程序化画布处理组成：
+粉色百合使用提供的视频提取的透明逐帧素材；其他花保留原先的 29 帧开合：
 
 1. **合拢途中直接凋零**——从当前花形进入动画，提前预载视频帧，避免抽中后等素材造成停顿；
 2. **连续过渡**——收拢未结束时就开始下垂或散瓣，收尾沿用上一帧画面，不再二次上色或跳位；
-3. **因花而异**——孤挺花与香雪兰收缩，白山茶整朵下落，百合与芍药散瓣；粉色百合使用视频逐帧素材。
+3. **只作用于百合**——别的花保持正常开合，不会进入枯态。
 
 凋零结束后文字提示重新开花；切换花种会立即取消尚在播放的凋零效果。
 
-| 花种 | 时长 | 收尾 |
-|---|---|---|
-| 重瓣孤挺花 | 7.6s | 花冠收拢、下沉 |
-| 白山茶 | 7.2s | 整朵下落 |
-| 香雪兰 | 7.8s | 花枝垂头、停在枯态 |
-| 粉色百合 | 8.6s | 长瓣分片散落 |
-| 粉色芍药 | 8.2s | 多层花瓣散落 |
+| 花种 | 效果 |
+|---|---|
+| 粉色百合 | 开合；满足次数后 30% 概率凋零，约 10 秒 |
+| 其他四朵 | 只开合 |
 
-### 将来使用真正的凋零视频
+### 离线使用和访问边界
 
-现在这套是「倒放 + 程序化处理」的近似。如果之后有真正的凋零素材（每朵花一段，
-最好与开花帧同样的机位、同样的平光、30fps、4～8 秒）：
+网页脚本、花朵帧、字体和 MediaPipe 模型都由本站提供，没有运行所必需的第三方 CDN。
+首次在有网络时点击「保存离线版」，等到显示「已可离线使用」，同一浏览器便会缓存交互所需文件；
+断网后仍可打开这个网址使用演示和手势（摄像头权限仍须允许）。清除浏览器网站数据或换设备后需重新保存。
+GitHub Pages 无法保证所有地区、运营商或受限网络都能连上，首次访问和首次保存离线版仍需要能访问 GitHub Pages。
 
-需要为每朵花提取、去背景并对齐视频帧，再在 `wither.js` 中接入；当前版本尚未实现
-自动加载后续凋零视频。最好提供与已有开花帧同角度、同构图的素材，以免切换时跳变。
+### 粉色百合素材
+
+目前百合凋零采用用户视频提取的 81 张透明 WebP 帧，位于 `assets/wither/lily/`。
+若今后替换素材，尽量保持与开花帧相同的机位、构图和光线，以减少切换时的形状跳变。
 
 ### 已知限制
 
-源帧从 AI 视频中抠出，部分花朵边缘有浅色矩形残边；程序化调色无法生成
-视频里真实卷曲、破损的新花瓣细节。要达到参考片的真实凋落质感，仍需各花对应的凋零素材。
+源帧从 AI 视频中抠出，部分花朵边缘有浅色矩形残边；百合的开花帧与凋零视频
+不是同一连续拍摄，因此交接处仍可能有轻微形状差异。
 
 ## Layout
 
@@ -93,7 +94,8 @@ collection.html       COLLECTION · 花集
 styles.css            styles
 pages.css             styles for the three content pages
 garden.js             bloom logic + hand tracking (ES module)
-wither.js             withering engine (frame rewind + grade + settle)
+wither.js             pink lily withering renderer
+offline-sw.js         optional same-origin offline cache
 gesture-core.js       hand math helpers
 fonts.local.css       @font-face for the self-hosted fonts
 assets/fonts/         woff2 subsets (Cormorant Garamond, DM Sans, Noto Serif SC)

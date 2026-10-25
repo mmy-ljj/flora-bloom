@@ -4,6 +4,7 @@ import { WitherCycle } from "./wither-cycle.js";
 
 /* 两次完整开合后，从第三次合拢途中开始独立抽取 30%。 */
 const WITHER_CHANCE = 0.3;
+const WITHER_SPECIES = 3; // Only the pink lily can wither.
 const witherFlag = new URLSearchParams(location.search).get("wither");
 const FORCED_WITHER = witherFlag === "1" ? 1 : witherFlag === "0" ? 0 : null;
 
@@ -42,6 +43,7 @@ const $ = (selector) => document.querySelector(selector);
 const page = $(".experience"), camera = $("#camera"), canvas = $("#hand-overlay"), context = canvas.getContext("2d");
 const stage = $("#bloom-stage"), animation = $("#bloom-animation"), bud = $("#species-bud"), open = $("#species-open");
 const custom = $("#custom-flower"), cameraButton = $("#camera-button"), demoButton = $("#demo-button");
+const offlineButton = $("#offline-button");
 const indicator = $("#mode-indicator"), note = $("#interaction-note"), debug = $("#gesture-debug");
 const palmValue = $("#palm-value"), palmProgress = $("#palm-progress"), switchValue = $("#switch-value"), switchProgress = $("#switch-progress");
 const mainGesture = new HandOpenness(), secondGesture = new HandOpenness({ smoothMs: 55 }), switcher = new SecondHandSwipe();
@@ -125,13 +127,13 @@ function witherProfileKey() {
   return currentFlower().folder === "original" ? "original" : currentFlower().folder;
 }
 function observeBloom(openness, now) {
-  if (state.withering || stage.classList.contains("has-image")) return;
+  if (state.withering || state.species !== WITHER_SPECIES || stage.classList.contains("has-image")) return;
   const result = state.witherCycle.update(openness, now);
   if (result.triggered) startWither();
 }
 
 async function startWither() {
-  if (state.withering) return;
+  if (state.withering || state.species !== WITHER_SPECIES || stage.classList.contains("has-image")) return false;
   const customFlower = stage.classList.contains("has-image");
   state.withering = true;
   const run = ++state.witherRun;
@@ -342,6 +344,29 @@ $("#flower-info-button").addEventListener("click", openFlowerDialog);
 $("#dialog-close").addEventListener("click", () => dialog.close());
 dialog.addEventListener("click", (event) => { if (event.target === dialog) dialog.close(); });
 $("#flower-file").addEventListener("change", (event) => loadFlower(event.target.files?.[0]));
+if ("serviceWorker" in navigator && window.isSecureContext) {
+  navigator.serviceWorker.register("./offline-sw.js").then(() => navigator.serviceWorker.ready).then((registration) => {
+    offlineButton.hidden = false;
+    offlineButton.addEventListener("click", () => {
+      offlineButton.disabled = true;
+      offlineButton.textContent = "正在保存…";
+      const channel = new MessageChannel();
+      channel.port1.onmessage = ({ data }) => {
+        if (data.type === "progress") {
+          offlineButton.textContent = `离线保存 ${Math.round(data.completed / data.total * 100)}%`;
+        } else {
+          offlineButton.disabled = false;
+          offlineButton.textContent = data.type === "ready" ? "已可离线使用" : "重试离线保存";
+          note.textContent = data.type === "ready"
+            ? "离线素材已保存到本浏览器；断网后可继续打开本网址"
+            : "离线素材未存全，请在网络稳定时重试";
+          channel.port1.close();
+        }
+      };
+      registration.active.postMessage({ type: "PREPARE_OFFLINE" }, [channel.port2]);
+    });
+  }).catch((error) => console.warn("Offline support unavailable", error));
+}
 window.addEventListener("beforeunload", () => { stopCamera(); if (state.customUrl) URL.revokeObjectURL(state.customUrl); state.tracker?.close(); });
 const flowerQuery = new URLSearchParams(location.search).get("flower");
 if (flowerQuery) {
@@ -350,4 +375,3 @@ if (flowerQuery) {
 }
 requestAnimationFrame(track);
 warmWitherAssets(state.species);
-preloadLilyWilt().catch(() => {});
