@@ -1,6 +1,6 @@
 /* Same-origin cache: an optional, explicit offline download, not a promise
  * that GitHub Pages is reachable on every network. */
-const CACHE_NAME = "flora-offline-v1";
+const CACHE_NAME = "flora-offline-v2";
 const scope = self.registration.scope;
 const local = (path) => new URL(path, scope).href;
 const shell = [
@@ -9,7 +9,7 @@ const shell = [
   "./styles.css", "./pages.css", "./fonts.local.css",
   "./assets/favicon.svg", "./assets/pink-bloom-open.webp", "./assets/white-camellias.webp",
 ];
-const frames = ["frames", "seedance/white", "seedance/purple", "seedance/lily", "seedance/peony"]
+const frames = ["frames", "seedance/white", "seedance/purple", "seedance/lily", "seedance/peony", "seedance/blush-peony"]
   .flatMap((folder) => Array.from({ length: 29 }, (_, i) =>
     `./assets/${folder}/flower_${String(i).padStart(2, "0")}.webp`));
 const lilyWilt = Array.from({ length: 81 }, (_, i) =>

@@ -22,7 +22,7 @@ with sync_playwright() as playwright:
     context.set_offline(True)
     page.goto(BASE + "?debug=1&wither=1", wait_until="domcontentloaded")
     page.wait_for_function("Boolean(window.__floraDebug)")
-    for number in range(5):
+    for number in range(6):
         page.evaluate("number => window.__floraDebug.selectFlower(number, false)", number)
         page.wait_for_function("document.querySelector('#bloom-animation').complete && document.querySelector('#bloom-animation').naturalWidth > 0")
     assert page.evaluate("async () => (await fetch('./assets/mediapipe/hand_landmarker.task')).ok")
@@ -31,4 +31,4 @@ with sync_playwright() as playwright:
     page.wait_for_function("window.__floraDebug.bloomState.mode === 'camera'", timeout=45000)
     assert not errors, errors
     browser.close()
-print("offline QA OK: site, five flowers, lily frames and camera tracking")
+print("offline QA OK: site, six flowers, lily frames and camera tracking")

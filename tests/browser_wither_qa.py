@@ -11,7 +11,16 @@ with sync_playwright() as playwright:
     errors = []
     page.on("pageerror", lambda error: errors.append(str(error)))
     page.goto(BASE, wait_until="domcontentloaded")
-    for number in (0, 1, 2, 4):
+    for number in (0, 1):
+        page.evaluate("number => window.__floraDebug.selectFlower(number, false)", number)
+        page.wait_for_function("document.querySelector('#bloom-stage').classList.contains('is-smooth')", timeout=12000)
+        signatures = []
+        for frame in (0, 0.5, 1):
+            signatures.append(page.evaluate("frame => { window.__floraDebug.setOpenness(1 - frame / 28); const data = document.querySelector('.bloom-smooth-layer').getContext('2d').getImageData(0, 0, document.querySelector('.bloom-smooth-layer').width, document.querySelector('.bloom-smooth-layer').height).data; let total = 0; for (let i = 0; i < data.length; i += 97) total += data[i] * ((i % 7) + 1); return total; }", frame))
+            if frame == 0.5:
+                page.screenshot(path=str(Path(__file__).resolve().parents[1] / "qa" / f"smooth-{number + 1}.png"))
+        assert len(set(signatures)) == 3, f"flower {number + 1} has no distinct in-between frame"
+    for number in (0, 1, 2, 4, 5):
         page.evaluate("number => window.__floraDebug.selectFlower(number, false)", number)
         page.wait_for_timeout(200)
         assert page.evaluate("window.__floraDebug.wither()") is False
@@ -25,6 +34,11 @@ with sync_playwright() as playwright:
     page.evaluate("() => { window.__qaWilt = window.__floraDebug.wither(); }")
     page.wait_for_function("document.querySelector('#bloom-stage').classList.contains('is-withering')")
     page.wait_for_function("document.querySelector('#bloom-stage').classList.contains('is-withered')", timeout=15000)
+    page.goto(BASE + "&flower=6", wait_until="domcontentloaded")
+    page.wait_for_function("document.querySelector('#flower-title').textContent.includes('浅粉重瓣芍药')")
+    page.screenshot(path=str(Path(__file__).resolve().parents[1] / "qa" / "sixth-mobile.png"))
+    page.locator("#flower-info-button").click()
+    assert "Paeonia" in page.locator("#flower-dialog").inner_text()
     assert not errors, errors
     browser.close()
 print("mobile QA OK: only pink lily withers")

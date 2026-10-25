@@ -37,11 +37,21 @@ const FLOWERS = [
     facts: [["学名", "Paeonia lactiflora"], ["科属", "芍药科 Paeoniaceae · 芍药属"], ["花期", "5 月，单朵开 5—7 天"], ["原产", "中国北方、西伯利亚、朝鲜半岛"], ["花语", "情有独钟 · 依依惜别"]],
     detail: "识别依据：宽大波缘的外瓣、向内逐渐细碎的瓣化雄蕊、花心露出的金黄雌蕊、圆球花蕾与青绿萼片，这一组结构是芍药属重瓣型（千层类）的标准形态；单枝单朵、花葶直立，符合切花芍药。习性：多年生草本，秋植春发，5 月开花，是中国传统名花，与牡丹的区别在木质与草质茎。手掌张合让它在盛开与紧裹的花苞之间移动。",
     source: "https://www.rhs.org.uk/plants/peony/herbaceous/growing-guide" },
+  { name: "浅粉重瓣芍药<br /><i>Peony · In Motion</i>", label: "芍药科芍药属 · Paeonia", short: "浅粉重瓣芍药", meaning: "层叠 · 柔粉 · 盛放", kind: "frames", folder: "blush-peony", image: "./assets/seedance/blush-peony/flower_00.webp",
+    intro: "花冠呈宽圆的碗形，外围是宽大、浅粉近白的花瓣，内圈瓣片更密、更直立，围出带较深粉色的花心。视频里的花从较收拢的杯状逐渐张开，外层花瓣铺展，内层仍层层相叠。",
+    facts: [["学名", "Paeonia（芍药属）"], ["科属", "芍药科 Paeoniaceae · 芍药属"], ["花型", "重瓣、碗形花冠"], ["常见花期", "晚春至初夏（芍药属园艺花型）"], ["影像", "Seedance 视频 · 29 帧交互"]],
+    detail: "观察依据：外围大瓣呈浅粉色，中央较小的瓣片密集叠生，雄蕊大部分被遮住；这种碗形、重瓣结构与芍药属园艺花型相符。视频没有枝、叶和完整花蕾，不能据此确认具体种、牡丹或草本芍药，也不指定栽培品种。手掌张开时播放到较展开的画面，合拢时倒回较收拢的画面。",
+    source: "https://www.rhs.org.uk/plants/peony" },
 ];
 const CONNECTIONS = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[17,18],[18,19],[19,20],[0,17]];
 const $ = (selector) => document.querySelector(selector);
 const page = $(".experience"), camera = $("#camera"), canvas = $("#hand-overlay"), context = canvas.getContext("2d");
 const stage = $("#bloom-stage"), animation = $("#bloom-animation"), bud = $("#species-bud"), open = $("#species-open");
+const smoothCanvas = document.createElement("canvas");
+smoothCanvas.className = "bloom-smooth-layer";
+smoothCanvas.setAttribute("aria-hidden", "true");
+stage.appendChild(smoothCanvas);
+const smoothContext = smoothCanvas.getContext("2d");
 const custom = $("#custom-flower"), cameraButton = $("#camera-button"), demoButton = $("#demo-button");
 const offlineButton = $("#offline-button");
 const indicator = $("#mode-indicator"), note = $("#interaction-note"), debug = $("#gesture-debug");
@@ -87,6 +97,7 @@ async function preloadSpeciesFrames(species) {
   })));
   if (frames.some((frame) => !frame)) throw new Error("Flower frame download failed");
   state.frames[species] = frames;
+  if (state.species === species && !state.withering) showFrame((1 - state.openness) * 28);
   return frames;
 }
 async function preloadFrames() {
@@ -94,11 +105,34 @@ async function preloadFrames() {
   return state.frames;
 }
 function setLabel(label, active = false) { indicator.innerHTML = `<i></i> ${label}`; indicator.classList.toggle("is-live", active); }
+function drawSmoothFrame(position) {
+  const frames = state.frames[state.species];
+  if (!frames || (state.species !== 0 && state.species !== 1)) return false;
+  const low = Math.floor(position), high = Math.ceil(position), mix = position - low;
+  const width = frames[0].naturalWidth, height = frames[0].naturalHeight;
+  if (smoothCanvas.width !== width || smoothCanvas.height !== height) {
+    smoothCanvas.width = width;
+    smoothCanvas.height = height;
+  }
+  smoothContext.clearRect(0, 0, width, height);
+  smoothContext.globalAlpha = 1 - mix;
+  smoothContext.drawImage(frames[low], 0, 0, width, height);
+  if (high !== low) {
+    smoothContext.globalAlpha = mix;
+    smoothContext.drawImage(frames[high], 0, 0, width, height);
+  }
+  smoothContext.globalAlpha = 1;
+  return true;
+}
 function showFrame(index) {
   if (FLOWERS[state.species].kind !== "frames" || stage.classList.contains("has-image")) return;
   if (!state.withering && state.wither && state.wither.held) state.wither.release();
-  if (index === state.currentFrame) return;
-  animation.src = state.frames[state.species]?.[index]?.src ?? frameUrl(state.species, index); state.currentFrame = index;
+  const exact = clamp(index, 0, 28);
+  stage.classList.toggle("is-smooth", drawSmoothFrame(exact));
+  const nearest = Math.round(exact);
+  if (nearest === state.currentFrame) return;
+  animation.src = state.frames[state.species]?.[nearest]?.src ?? frameUrl(state.species, nearest);
+  state.currentFrame = nearest;
 }
 function setOpenness(value, now = performance.now()) {
   const openness = clamp(value, 0, 1);
@@ -116,7 +150,7 @@ function setOpenness(value, now = performance.now()) {
         state.wiltRearm = false;
         showFrame(Math.round((1 - openness) * 28));
       }
-    } else showFrame(Math.round((1 - openness) * 28));
+    } else showFrame((1 - openness) * 28);
   }
   if (!state.wither.held) observeBloom(openness, now);
   palmValue.textContent = `${Math.round(openness * 100)}%`; palmProgress.style.width = `${Math.round(openness * 100)}%`;
@@ -212,7 +246,7 @@ function selectFlower(index, animate = true) {
     page.classList.remove("is-demo-pair");
     state.currentFrame = null;
     if (flower.kind === "pair") { bud.src = flower.bud; open.src = flower.open; }
-    else { bud.removeAttribute("src"); open.removeAttribute("src"); showFrame(Math.round((1 - state.openness) * 28)); }
+    else { bud.removeAttribute("src"); open.removeAttribute("src"); showFrame((1 - state.openness) * 28); }
     if (state.mode === "demo") { state.demoStartedAt = performance.now(); page.classList.toggle("is-demo-pair", flower.kind === "pair"); }
     note.textContent = `已切换至${flower.short} · 张合手掌控制开合`;
     stage.classList.remove("is-switching");
@@ -273,7 +307,7 @@ function readHand(result, now) {
   if (debug) debug.textContent = `主手 ${reading.visible ? Math.round((reading.openness ?? 0) * 100) + "%" : "未识别"} · 第二只手 ${other.visible ? Math.round((other.openness ?? 0) * 100) + "%" : "未识别"} · 左滑 ${Math.round(switching.progress * 100)}% · 花种 ${state.species + 1}`;
 }
 if (debug && !debug.hidden) window.__floraDebug = {
-  readHand, selectFlower, wither: startWither, abortWither,
+  readHand, selectFlower, setOpenness, wither: startWither, abortWither,
   get bloomState() { return { mode: state.mode, cycles: state.witherCycle.cycles, withering: state.withering, frame: state.currentFrame }; },
 };
 function track(now) {
@@ -334,6 +368,7 @@ function loadFlower(file) {
   if (!["image/png", "image/webp"].includes(file.type) || file.size > 15 * 1024 * 1024) { note.textContent = "请选择 15MB 以下的透明 PNG / WebP"; return; }
   if (state.customUrl) URL.revokeObjectURL(state.customUrl);
   state.customUrl = URL.createObjectURL(file); custom.src = state.customUrl; stage.classList.add("has-image");
+  stage.classList.remove("is-smooth");
   $("#flower-info-button").setAttribute("aria-label", "了解你上传的花朵");
   note.textContent = "已载入你的花朵，可继续用手势控制大小"; setLabel("自定义花朵", true);
 }

@@ -78,5 +78,8 @@
 /* 凋零层：合拢段直接在帧图上做（filter/transform），落瓣/脱落的收尾才用 canvas，
    与原逐帧图共用同一底部渐隐遮罩 */
 .bloom-stage .wither-layer{position:absolute;z-index:2;pointer-events:none;opacity:0}
+.bloom-stage .bloom-smooth-layer{position:absolute;inset:0;z-index:1;width:100%;height:100%;object-fit:contain;pointer-events:none;display:none}
+.bloom-stage.is-smooth .bloom-smooth-layer{display:block}
+.bloom-stage.is-smooth .bloom-animation{opacity:0}
 .bloom-stage img{transition:opacity .5s ease}
 .experience.is-withering .interaction-note{color:#8d8377;letter-spacing:.16em}
