@@ -115,6 +115,8 @@ function drawSmoothFrame(position) {
     smoothCanvas.height = height;
   }
   smoothContext.clearRect(0, 0, width, height);
+  // Add the premultiplied frames so their opacity stays constant between frames.
+  smoothContext.globalCompositeOperation = high !== low ? "lighter" : "source-over";
   smoothContext.globalAlpha = 1 - mix;
   smoothContext.drawImage(frames[low], 0, 0, width, height);
   if (high !== low) {
@@ -122,6 +124,7 @@ function drawSmoothFrame(position) {
     smoothContext.drawImage(frames[high], 0, 0, width, height);
   }
   smoothContext.globalAlpha = 1;
+  smoothContext.globalCompositeOperation = "source-over";
   return true;
 }
 function showFrame(index) {

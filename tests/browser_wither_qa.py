@@ -20,6 +20,25 @@ with sync_playwright() as playwright:
             if frame == 0.5:
                 page.screenshot(path=str(Path(__file__).resolve().parents[1] / "qa" / f"smooth-{number + 1}.png"))
         assert len(set(signatures)) == 3, f"flower {number + 1} has no distinct in-between frame"
+        opacity = page.evaluate("""() => {
+          const canvas = document.querySelector('.bloom-smooth-layer');
+          const context = canvas.getContext('2d');
+          const alpha = frame => {
+            window.__floraDebug.setOpenness(1 - frame / 28);
+            return context.getImageData(0, 0, canvas.width, canvas.height).data;
+          };
+          const start = alpha(0), end = alpha(1), middle = alpha(.5);
+          let common = 0, lowest = 255;
+          for (let i = 3; i < start.length; i += 4) {
+            if (start[i] > 250 && end[i] > 250) {
+              common++;
+              lowest = Math.min(lowest, middle[i]);
+            }
+          }
+          return { common, lowest };
+        }""")
+        assert opacity["common"] > 100, f"flower {number + 1} has no common opaque pixels"
+        assert opacity["lowest"] >= 250, f"flower {number + 1} fades during frame blending: {opacity}"
     for number in (0, 1, 2, 4, 5):
         page.evaluate("number => window.__floraDebug.selectFlower(number, false)", number)
         page.wait_for_timeout(200)

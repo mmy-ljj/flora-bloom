@@ -1,6 +1,6 @@
 /* Same-origin cache: an optional, explicit offline download, not a promise
  * that GitHub Pages is reachable on every network. */
-const CACHE_NAME = "flora-offline-v3";
+const CACHE_NAME = "flora-offline-v4";
 const scope = self.registration.scope;
 const local = (path) => new URL(path, scope).href;
 const shell = [
