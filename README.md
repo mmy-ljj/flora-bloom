@@ -103,6 +103,7 @@ assets/fonts/         woff2 subsets (Cormorant Garamond, DM Sans, Noto Serif SC)
 assets/frames/        flower bloom frames (webp 00..28)
 assets/seedance/      5 additional flower frame sets
 tools/extract_sixth_flower.py  source-video frame extraction (requires OpenCV, NumPy, Pillow)
+tools/extract_fifth_motion.py  fifth flower's replacement open-to-closed video frames
 assets/mediapipe/     hand_landmarker.task + tasks-vision runtime + wasm
 ```
 
